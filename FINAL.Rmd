@@ -1,0 +1,89 @@
+---
+title: "GR5291-final"
+author: "Biying Deng(bd2532)"
+date: "10/1/2019"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(tidytext)
+library(dplyr)
+airbb<-read.csv("~/Desktop/GR5291 Advanced ML/Final project/data/AB_NYC_2019.csv")
+
+summary(airbb)
+
+```
+
+Data cleaning 
+
+1.convert empty data into NA
+```{r}
+
+
+#function to convert
+empty_as_na<-function(x){
+  if("factor" %in% class(x)) x <-as.character(x)
+  ifelse(as.character(x) !="",x,NA)
+}
+airbb<-airbb %>% mutate_each(funs(empty_as_na))
+
+#get total num of na in all columns
+sapply(airbb,function(x) sum(is.na(x)))
+
+```
+"last_review" is date, there are no reivews for the listing, date will not exist.
+
+when "number_of_review" is 0, we can follow our logic that the listing won't have any review and therefore will have "review_per_month" 0.Then we can replace NA in "review_per_month" with 0
+
+# drop unimportant variabes: id, host_name
+
+```{r}
+airbb<-airbb[,-c(1,4)]
+```
+
+# replace NA in "review_per_month" with 0
+
+```{r}
+airbb$reviews_per_month[is.na(airbb$reviews_per_month)==T]<-0
+
+#check replacement success or not
+sum(is.na(airbb$reviews_per_month))
+```
+
+# replace NA name with None
+```{r}
+airbb$name[is.na(airbb$name)==T]<-"None"
+
+```
+
+```{r}
+airbb$host_id<-as.character(airbb$host_id)
+```
+
+
+
+# Explore neighborhood group and neighborhood
+```{r}
+unique(airbb$neighbourhood_group)
+length(unique(airbb$neighbourhood))
+
+# For each neighborhood_group, number of distinct neighborhood under each neighborhood_group
+airbb %>% group_by(neighbourhood_group) %>% summarise(num=n_distinct(neighbourhood))
+
+```
+
+There are three major neighborhoods in New York City: Bronx, Brooklyn, Queens, Staten Island.
+
+```{r}
+ sort_num_listing<-airbb %>% group_by(host_id) %>% summarise(listing=n()) %>% arrange(desc(listing)) %>% head(10)
+
+ggplot(sort_num_listing,aes(y=listing,y=fill=factor(host_id))) + geom_bar()
+
+airbb %>% filter(host_id=="219517861")
+
+
+airbb %>% select(name,host_id) %>% unnest_tokens(word,name) %>% anti_join(stop_words) %>% count(word,sort = T) 
+```
+
+
